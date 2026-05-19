@@ -8,6 +8,12 @@ import yt_dlp
 import urllib.request
 from flask import Flask, render_template, request, Response, send_from_directory
 
+# Tambahkan path bin lokal ke system PATH agar Render Python runtime bisa menemukan ffmpeg
+project_bin = os.path.join(os.getcwd(), "opt", "bin")
+if os.path.exists(project_bin):
+    os.environ["PATH"] = project_bin + os.path.pathsep + os.environ["PATH"]
+
+
 # Patch global untuk menangani error OpenSSL 3.x [SSL: UNEXPECTED_EOF_WHILE_READING]
 orig_create_default_context = ssl.create_default_context
 def patched_create_default_context(*args, **kwargs):
