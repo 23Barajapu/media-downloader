@@ -20,30 +20,38 @@ ssl.create_default_context = patched_create_default_context
 
 app = Flask(__name__)
 
+@app.route('/healthz')
+def healthz():
+    return {"status": "ok"}, 200
+
 # ============================================================
-# SELF-PING KEEP-ALIVE: Mencegah Hugging Face menidurkan Space
+# SELF-PING KEEP-ALIVE: Mencegah Platform menidurkan App
 # secara otomatis karena dianggap idle/tidak aktif.
 # ============================================================
 def _keep_alive_pinger():
-    """Thread daemon yang mem-ping URL Space ini setiap 25 menit."""
+    """Thread daemon yang mem-ping URL App ini setiap 25 menit."""
     # Beri waktu 60 detik agar server Gunicorn selesai melakukan startup dulu
     time.sleep(60)
     
-    # Ambil URL Space dari environment variable Hugging Face (SPACE_HOST)
-    # Format: <username>-<space-name>.hf.space
+    # Deteksi URL dari Hugging Face atau Render
     space_host = os.environ.get("SPACE_HOST", "")
-    if not space_host:
-        print("[KeepAlive] SPACE_HOST tidak ditemukan. Self-ping dinonaktifkan.")
+    render_url = os.environ.get("RENDER_EXTERNAL_URL", "")
+    
+    if space_host:
+        ping_url = f"https://{space_host}/"
+    elif render_url:
+        ping_url = render_url
+    else:
+        print("[KeepAlive] SPACE_HOST / RENDER_EXTERNAL_URL tidak ditemukan. Self-ping dinonaktifkan.")
         return
 
-    ping_url = f"https://{space_host}/"
     print(f"[KeepAlive] Self-ping aktif. Target: {ping_url} (setiap 25 menit)")
     
     while True:
         try:
             req = urllib.request.Request(
                 ping_url,
-                headers={"User-Agent": "HF-Space-KeepAlive/1.0"}
+                headers={"User-Agent": "App-KeepAlive/1.0"}
             )
             with urllib.request.urlopen(req, timeout=15) as response:
                 print(f"[KeepAlive] Ping OK - Status: {response.status}")
