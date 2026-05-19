@@ -40,10 +40,8 @@ def healthz():
 # ============================================================
 def _keep_alive_pinger():
     """Thread daemon yang mem-ping URL App ini setiap 25 menit."""
-    # Beri waktu 60 detik agar server Gunicorn selesai melakukan startup dulu
     time.sleep(60)
     
-    # Deteksi URL dari Hugging Face atau Render
     space_host = os.environ.get("SPACE_HOST", "")
     render_url = os.environ.get("RENDER_EXTERNAL_URL", "")
     
@@ -66,10 +64,8 @@ def _keep_alive_pinger():
             with urllib.request.urlopen(req, timeout=15) as response:
                 print(f"[KeepAlive] Ping OK - Status: {response.status}")
         except Exception as e:
-            # Abaikan error jaringan sementara, cukup log saja
             print(f"[KeepAlive] Ping gagal (akan coba lagi): {e}")
         
-        # Tunggu 25 menit sebelum ping berikutnya
         time.sleep(25 * 60)
 
 # Jalankan pinger sebagai daemon thread (otomatis mati saat server mati)
@@ -88,7 +84,6 @@ class SSELogger:
     def debug(self, msg):
         if self.download_id and self.download_id in canceled_downloads:
             raise Exception("DOWNLOAD_CANCELED")
-        # Saring pesan verbose yang tidak perlu
         msg_str = str(msg).strip()
         if msg_str:
             self.q.put({"type": "log", "message": msg_str})
@@ -138,7 +133,6 @@ def make_progress_hook(q, download_id=None):
             raise Exception("DOWNLOAD_CANCELED")
             
         if d['status'] == 'downloading':
-            # 1. Hitung persentase secara presisi
             downloaded = d.get('downloaded_bytes', 0)
             total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
             if total > 0:
@@ -150,7 +144,6 @@ def make_progress_hook(q, download_id=None):
                 except ValueError:
                     percent = 0.0
             
-            # 2. Format kecepatan tarik (Speed) mentah (hitung manual jika None pada HLS/DASH)
             speed_bytes = d.get('speed')
             elapsed = d.get('elapsed', 0)
             if speed_bytes is None and elapsed > 0 and downloaded > 0:
@@ -167,7 +160,6 @@ def make_progress_hook(q, download_id=None):
                 speed_str = d.get('_speed_str', '')
                 speed = speed_str.strip() if speed_str else 'Menghitung...'
             
-            # 3. Format perkiraan waktu sisa (ETA) mentah (hitung manual jika None)
             eta_seconds = d.get('eta')
             if eta_seconds is None and speed_bytes is not None and speed_bytes > 0 and total > downloaded:
                 eta_seconds = (total - downloaded) / speed_bytes
@@ -200,14 +192,12 @@ def make_progress_hook(q, download_id=None):
             })
     return progress_hook
 
-# Helper untuk mencari file yang baru saja selesai diunduh
 def get_latest_downloaded_file(folder):
     if not os.path.exists(folder):
         return None
     files = [os.path.join(folder, f) for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
     if not files:
         return None
-    # Cari file dengan waktu modifikasi paling akhir
     latest_file = max(files, key=os.path.getmtime)
     return os.path.basename(latest_file)
 
@@ -233,7 +223,6 @@ def stream_download():
             if not os.path.exists(output_folder):
                 os.makedirs(output_folder)
             
-            # Konfigurasi yt-dlp dengan logger kustom dan progress hook
             if format_type == 'audio':
                 preferred_quality = quality if quality in ['320', '192', '128', '96'] else '192'
                 ydl_opts = {
@@ -290,11 +279,9 @@ def stream_download():
                 }
 
             try:
-                # Deteksi otomatis berkas cookies.txt untuk melewati blokir cloud YouTube
                 if os.path.exists("cookies.txt"):
                     ydl_opts['cookiefile'] = "cookies.txt"
                     
-                # Injeksi proxy dinamis dari parameter query jika disediakan
                 if proxy:
                     formatted_proxy = proxy
                     if not (proxy.startswith("http://") or proxy.startswith("https://") or proxy.startswith("socks5://") or proxy.startswith("socks4://")):
@@ -305,7 +292,6 @@ def stream_download():
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([video_url])
                 
-                # Mengirimkan pesan sukses dengan nama file agar perangkat remote bisa langsung unduh
                 latest_file = get_latest_downloaded_file(output_folder)
                 q.put({
                     "type": "success", 
@@ -317,7 +303,6 @@ def stream_download():
                 is_bstation = any(domain in video_url.lower() for domain in ['bilibili', 'bstation', 'b.tv'])
                 is_youtube = any(domain in video_url.lower() for domain in ['youtube.com', 'youtu.be'])
                 
-                # Deteksi jika Bstation terblokir regional atau YouTube mendeteksi bot
                 should_bypass = False
                 bypass_reason = ""
                 if not proxy:
@@ -335,7 +320,6 @@ def stream_download():
                     proxies = get_free_indonesian_proxy()
                     if proxies:
                         success = False
-                        # Coba maksimal 4 proxy teratas dari list
                         for idx, attempt_proxy in enumerate(proxies[:4]):
                             q.put({"type": "status", "message": f"Bypass: Mencoba Proxy {idx+1}/{min(4, len(proxies))}..."})
                             q.put({"type": "log", "message": f"[Auto-Proxy] Mencoba terhubung melalui http://{attempt_proxy}"})
@@ -370,33 +354,26 @@ def stream_download():
                 else:
                     q.put({"type": "error", "message": err_msg})
             finally:
-                # Bersihkan set cancel
                 if download_id in canceled_downloads:
                     try:
                         canceled_downloads.remove(download_id)
                     except KeyError:
                         pass
-                # Menandakan bahwa proses selesai
                 q.put({"type": "done"})
 
-        # Menjalankan proses download di thread terpisah agar tidak memblokir Flask
         download_thread = threading.Thread(target=start_download)
         download_thread.start()
 
-        # Dengarkan antrian (Queue) dan kirimkan datanya ke halaman web lewat SSE
         while True:
             try:
-                # Batas waktu tunggu data baru 10 detik agar bisa mengirim ping berkala
                 item = q.get(timeout=10.0)
                 yield f"data: {json.dumps(item)}\n\n"
                 
                 if item.get("type") == "done":
                     break
             except queue.Empty:
-                # Jika thread unduhan sudah mati dan antrian kosong, hentikan generator
                 if not download_thread.is_alive():
                     break
-                # Kirim keep-alive ping berupa komentar agar server reverse proxy tidak menutup koneksi
                 yield ": keep-alive ping\n\n"
 
     return Response(
@@ -415,11 +392,9 @@ def open_folder():
     folder_path = os.path.abspath("Unduhan_Media")
     if os.path.exists(folder_path):
         try:
-            # Perintah khusus Windows untuk membuka file explorer
             os.startfile(folder_path)
             return {"status": "success"}
         except AttributeError:
-            # Di Linux / Cloud, kita abaikan karena tidak ada GUI Explorer
             return {"status": "success", "message": "Berjalan di cloud server."}
     return {"status": "error", "message": "Folder unduhan belum dibuat!"}, 404
 
@@ -430,7 +405,6 @@ def download_file():
         return "Nama file kosong!", 400
         
     folder_path = os.path.abspath("Unduhan_Media")
-    # Kirim file dari folder unduhan ke client/browser
     return send_from_directory(folder_path, filename, as_attachment=True)
 
 @app.route('/cancel')
@@ -441,12 +415,5 @@ def cancel_download():
         return {"status": "success", "message": f"Download {download_id} canceled"}
     return {"status": "error", "message": "No download ID provided"}, 400
 
-
 if __name__ == '__main__':
-    print("==================================================")
-    print(" UNIVERSAL MEDIA HUNTER WEB SERVER BERJALAN!")
-    print(" Gua kamu sekarang online di jaringan lokal!")
-    print(" Buka lewat komputer ini: http://127.0.0.1:5000")
-    print(" Buka lewat HP (satu Wi-Fi): http://<IP-KOMPUTER-KAMU>:5000")
-    print("==================================================")
     app.run(host='0.0.0.0', debug=True, port=5000)
