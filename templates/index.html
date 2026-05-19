@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Media Hunter - Alat Unduh Gambar Bergerak & Suara</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0b0813 0%, #171128 50%, #0d0614 100%);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --secondary: #d946ef;
+            --secondary-glow: rgba(217, 70, 239, 0.4);
+            --accent: #06b6d4;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.07);
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            position: relative;
+            padding: 2rem 1rem;
+        }
+
+        /* Decorative blur background elements */
+        .blur-sphere {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: 0;
+            opacity: 0.3;
+            pointer-events: none;
+            animation: drift 15s infinite alternate ease-in-out;
+        }
+
+        .sphere-1 {
+            width: 300px;
+            height: 300px;
+            background: var(--primary);
+            top: 15%;
+            left: 10%;
+        }
+
+        .sphere-2 {
+            width: 400px;
+            height: 400px;
+            background: var(--secondary);
+            bottom: 10%;
+            right: 5%;
+            animation-duration: 20s;
+        }
+
+        @keyframes drift {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            100% {
+                transform: translate(50px, 30px) scale(1.2);
+            }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            z-index: 10;
+            position: relative;
+        }
+
+        /* Glassmorphic Card */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 3rem 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .logo-area {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 20px;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 10px 25px var(--primary-glow);
+            animation: pulse-glow 3s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            0% {
+                box-shadow: 0 10px 25px var(--primary-glow);
+            }
+
+            100% {
+                box-shadow: 0 10px 35px var(--secondary-glow);
+            }
+        }
+
+        .logo-area svg {
+            width: 36px;
+            height: 36px;
+            fill: white;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            background: linear-gradient(135deg, #ffffff 30%, #e2e8f0 70%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        /* Input Group */
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 1.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+            transition: color 0.3s ease;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 1.15rem 7.5rem 1.15rem 3.25rem;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .url-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px var(--primary-glow);
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        .url-input:focus+.input-icon {
+            color: var(--primary);
+        }
+
+        .url-input::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+        }
+
+        .paste-btn {
+            position: absolute;
+            right: 0.6rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(217, 70, 239, 0.2));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            color: white;
+            padding: 0.45rem 0.8rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+            user-select: none;
+            backdrop-filter: blur(4px);
+            z-index: 10;
+        }
+
+        .paste-btn:hover {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .paste-btn:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        /* Modern Gradient Button */
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 1.15rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn:hover::after {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(217, 70, 239, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: none;
+            margin-top: 1rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Progress Card Area */
+        .progress-container {
+            margin-top: 2rem;
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .status-badge {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: var(--primary);
+            padding: 0.35rem 0.85rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .status-badge.success {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: var(--success);
+        }
+
+        .status-badge.error {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: var(--error);
+        }
+
+        .percent-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        /* Modern Progress Bar Outer */
+        .progress-bar-outer {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 30px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Glowing Progress Bar Inner */
+        .progress-bar-inner {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 30px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px var(--primary-glow);
+            position: relative;
+        }
+
+        .download-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            background: rgba(0, 0, 0, 0.15);
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+        }
+
+        .meta-item span {
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Live Console Logger */
+        .console-container {
+            margin-top: 1.5rem;
+        }
+
+        .console-title {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .console-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .console-dot.pulsing {
+            animation: pulse-dot 1s infinite alternate;
+        }
+
+        @keyframes pulse-dot {
+            0% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .console-log {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.25rem;
+            height: 180px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.8);
+            scroll-behavior: smooth;
+        }
+
+        .console-log::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .console-log::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .console-log::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .console-line {
+            margin-bottom: 0.35rem;
+            word-break: break-all;
+        }
+
+        .console-line.success {
+            color: var(--success);
+        }
+
+        .console-line.error {
+            color: var(--error);
+        }
+
+        .console-line.info {
+            color: var(--accent);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        /* Spinner for loading state */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            display: none;
+        }
+
+        /* Platforms Badges styling */
+        .platform-badges {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.65rem;
+            margin-top: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.35rem 0.75rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .badge svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
+
+        .badge:hover svg {
+            transform: scale(1.15);
+        }
+
+        .badge-yt {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .badge-yt:hover {
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+            border-color: #ef4444;
+        }
+
+        .badge-bs {
+            border-color: rgba(6, 182, 212, 0.3);
+            color: #06b6d4;
+        }
+
+        .badge-bs:hover {
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+            border-color: #06b6d4;
+        }
+
+        .badge-tt {
+            border-color: rgba(244, 63, 94, 0.3);
+            color: #f43f5e;
+        }
+
+        .badge-tt:hover {
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
+            border-color: #f43f5e;
+        }
+
+        .badge-ig {
+            border-color: rgba(236, 72, 153, 0.3);
+            color: #ec4899;
+        }
+
+        .badge-ig:hover {
+            box-shadow: 0 0 10px rgba(236, 72, 153, 0.4);
+            border-color: #ec4899;
+        }
+
+        .badge-fb {
+            border-color: rgba(59, 130, 246, 0.3);
+            color: #3b82f6;
+        }
+
+        .badge-fb:hover {
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+            border-color: #3b82f6;
+        }
+
+        .badge-tw {
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #f3f4f6;
+        }
+
+        .badge-tw:hover {
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
+            border-color: #ffffff;
+        }
+
+        /* Advanced Options Styling */
+        .advanced-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1.2rem;
+            user-select: none;
+        }
+        
+        .advanced-toggle:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .advanced-container {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.25rem 1rem;
+            margin-bottom: 1.2rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Quality Selector Styling */
+        .quality-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 0.5rem 1rem;
+            margin-bottom: 1.2rem;
+            gap: 1rem;
+        }
+
+        .quality-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .quality-select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            color: white;
+            padding: 0.45rem 1rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quality-select:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+        }
+
+        .quality-select option {
+            background: #171128;
+            color: white;
+            padding: 10px;
+        }
+
+        /* Hunt Type Selector */
+        .hunt-type-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 0.5rem 1rem;
+            margin-bottom: 1.2rem;
+            gap: 1rem;
+        }
+
+        .hunt-type-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .hunt-type-selector {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 0.2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .hunt-type-btn {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            user-select: none;
+        }
+
+        .hunt-type-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ========================================== */
+        /* RESPONSIVE DESIGN & MOBILE OPTIMIZATIONS   */
+        /* ========================================== */
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem 0.5rem;
+            }
+
+            .card {
+                padding: 2rem 1.25rem;
+                border-radius: 20px;
+            }
+
+            h1 {
+                font-size: 1.6rem;
+                margin-bottom: 0.4rem;
+            }
+
+            .subtitle {
+                font-size: 0.85rem;
+                line-height: 1.4;
+            }
+
+            /* Stack selector groups vertically for spacing */
+            .hunt-type-container,
+            .quality-container {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 0.85rem 1rem;
+                gap: 0.65rem;
+            }
+
+            .hunt-type-label,
+            .quality-label {
+                text-align: center;
+            }
+
+            .hunt-type-selector {
+                justify-content: center;
+            }
+
+            .hunt-type-btn {
+                flex: 1;
+                justify-content: center;
+                padding: 0.45rem 0.5rem;
+                font-size: 0.68rem;
+            }
+
+            .quality-select {
+                width: 100%;
+                text-align: center;
+                text-align-last: center; /* Center option text on Android/iOS browsers */
+            }
+
+            /* Input optimization: adjust padding to prevent text collision */
+            .url-input {
+                padding: 1.15rem 5.8rem 1.15rem 3rem;
+                font-size: 0.88rem;
+                border-radius: 14px;
+            }
+
+            .paste-btn {
+                right: 0.4rem;
+                padding: 0.4rem 0.6rem;
+                font-size: 0.68rem;
+                border-radius: 8px;
+            }
+
+            .btn {
+                padding: 1rem;
+                font-size: 0.95rem;
+                border-radius: 14px;
+            }
+
+            /* Badges scaling */
+            .platform-badges {
+                gap: 0.45rem;
+                margin-top: 1rem;
+            }
+
+            .badge {
+                font-size: 0.65rem;
+                padding: 0.25rem 0.55rem;
+                border-radius: 8px;
+            }
+
+            .download-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: center;
+                font-size: 0.78rem;
+                padding: 0.6rem 0.8rem;
+            }
+
+            .console-log {
+                height: 150px;
+                font-size: 0.78rem;
+                padding: 0.85rem;
+                border-radius: 12px;
+            }
+
+            .logo-area {
+                width: 55px;
+                height: 55px;
+                border-radius: 16px;
+                margin-bottom: 0.85rem;
+            }
+
+            .logo-area svg {
+                width: 28px;
+                height: 28px;
+            }
+        }
+
+        /* Support for very small devices (e.g. iPhone SE, 320px screen width) */
+        @media (max-width: 360px) {
+            .url-input {
+                padding-right: 5.2rem;
+                font-size: 0.82rem;
+            }
+            
+            .paste-btn {
+                padding: 0.35rem 0.45rem;
+                font-size: 0.62rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="blur-sphere sphere-1"></div>
+    <div class="blur-sphere sphere-2"></div>
+
+    <div class="container">
+        <div class="card">
+
+            <div class="header">
+                <div class="logo-area">
+                    <!-- Custom SVG Logo -->
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z" />
+                    </svg>
+                </div>
+                <h1>UNIVERSAL MEDIA DOWNLOADER</h1>
+                <p class="subtitle">Unduh video & suara dari YouTube, Bstation, TikTok, Instagram, Twitter/X, dan 1000+
+                    Platform lainnya! 🦖</p>
+
+                <div class="platform-badges">
+                    <div class="badge badge-yt">
+                        <svg viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.387.507 9.387.507s7.517 0 9.387-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                        <span>YouTube</span>
+                    </div>
+                    <div class="badge badge-bs">
+                        <svg viewBox="0 0 24 24"><path d="M20 7H16.4L18.7 4.7C19.1 4.3 19.1 3.7 18.7 3.3C18.3 2.9 17.7 2.9 17.3 3.3L13.6 7H10.4L6.7 3.3C6.3 2.9 5.7 2.9 5.3 3.3C4.9 3.7 4.9 4.3 5.3 4.7L7.6 7H4C1.8 7 0 8.8 0 11V20C0 22.2 1.8 24 4 24H20C22.2 24 24 22.2 24 20V11C24 8.8 22.2 7 20 7ZM20 20H4V11H20V20ZM7.5 13C8.3 13 9 13.7 9 14.5V15.5C9 16.3 8.3 17 7.5 17C6.7 17 6 16.3 6 15.5V14.5C6 13.7 6.7 13 7.5 13ZM16.5 13C17.3 13 18 13.7 18 14.5V15.5C18 16.3 17.3 17 16.5 17C15.7 17 15 16.3 15 15.5V14.5C15 13.7 15.7 13 16.5 13Z"/></svg>
+                        <span>Bstation</span>
+                    </div>
+                    <div class="badge badge-tt">
+                        <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.02 1.59 4.2 1.02 1.2 2.41 2.01 3.94 2.27V10.4c-1.54-.02-3.05-.53-4.32-1.41a8.49 8.49 0 0 1-1.22-1.07v7.55c.03 1.8-.46 3.6-1.45 5.09a9.6 9.6 0 0 1-3.9 3.51c-1.89.91-4.04 1.14-6.07.69a9.7 9.7 0 0 1-5.18-3.14A9.8 9.8 0 0 1 .47 13.11c-.34-2.03-.02-4.14.93-5.99A9.6 9.6 0 0 1 5 3.55c1.61-.83 3.44-1.2 5.25-1.06v4.06c-1.18-.11-2.39.15-3.39.79A5.8 5.8 0 0 0 4.19 10.9c-.28 1.15-.17 2.37.33 3.44a5.9 5.9 0 0 0 2.94 2.87c1.07.51 2.29.56 3.4.15a5.8 5.8 0 0 0 3.32-3.2c.3-.85.34-1.78.33-2.68V0c-.82.02-1.63.02-2.45.02H12.525z"/></svg>
+                        <span>TikTok</span>
+                    </div>
+                    <div class="badge badge-ig">
+                        <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+                        <span>Instagram</span>
+                    </div>
+                    <div class="badge badge-fb">
+                        <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                        <span>Facebook</span>
+                    </div>
+                    <div class="badge badge-tw">
+                        <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                        <span>Twitter/X</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hunt-type-container">
+                <span class="hunt-type-label">Format Unduhan:</span>
+                <div class="hunt-type-selector">
+                    <div class="hunt-type-btn active" data-type="video">📹 Video (MP4)</div>
+                    <div class="hunt-type-btn" data-type="audio">🎵 Audio (MP3)</div>
+                </div>
+            </div>
+
+            <div class="quality-container" id="qualityContainer">
+                <span class="quality-label">Kualitas Unduhan:</span>
+                <select id="qualitySelect" class="quality-select">
+                    <option value="best" selected>Kualitas Terbaik (Maksimal)</option>
+                    <option value="1080">Full HD (1080p)</option>
+                    <option value="720">HD (720p)</option>
+                    <option value="480">Standar (480p)</option>
+                    <option value="360">Rendah (360p)</option>
+                </select>
+            </div>
+
+            <div class="input-wrapper">
+                <input type="text" id="urlInput" class="url-input"
+                    placeholder="Masukkan URL video (YouTube, Bstation, TikTok, Instagram, dll)..." autocomplete="off">
+                <div class="input-icon">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                </div>
+                <button type="button" id="pasteBtn" class="paste-btn">
+                    TEMPEL
+                </button>
+            </div>
+
+            <!-- Advanced Proxy/Bypass Options -->
+            <div class="advanced-toggle" onclick="toggleAdvancedOptions()">
+                <span>⚙️ Opsi Lanjutan (Proxy / Bypass Regional)</span>
+                <span id="advancedArrow">▼</span>
+            </div>
+            
+            <div id="advancedOptionsContainer" class="advanced-container" style="display: none;">
+                <div class="input-wrapper" style="margin-bottom: 0;">
+                    <div class="input-icon">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                    </div>
+                    <input type="text" id="proxyInput" class="url-input" placeholder="Contoh: 103.191.165.119:80 (Proxy Indonesia)" style="padding-right: 1.5rem;">
+                </div>
+                <p class="subtitle" style="font-size: 0.72rem; margin-top: 0.5rem; text-align: left; line-height: 1.4;">
+                    *Masukkan alamat proxy Indonesia jika mengunduh video terblokir wilayah di Hugging Face. Kosongkan jika tidak diperlukan.
+                </p>
+            </div>
+
+            <button id="downloadBtn" class="btn">
+                <span class="btn-text">Download Video! 🪓</span>
+                <div class="spinner" id="btnSpinner"></div>
+            </button>
+
+            <button id="cancelBtn" class="btn btn-secondary" style="display: none; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.25); color: #f87171; margin-top: 0.75rem; justify-content: center; gap: 0.5rem;">
+                BATALKAN UNDUHAN
+            </button>
+
+            <!-- Progress & Logs Area -->
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-header">
+                    <div class="status-badge" id="statusBadge">
+                        <span class="console-dot pulsing" id="badgeDot"></span>
+                        <span id="badgeText">Menghubungkan...</span>
+                    </div>
+                    <div class="percent-text" id="percentText">0%</div>
+                </div>
+
+                <div class="progress-bar-outer">
+                    <div class="progress-bar-inner" id="progressBar"></div>
+                </div>
+
+                <div class="download-meta" id="downloadMeta">
+                    <div class="meta-item">kecepatan Download: <span id="speedVal">0 KB/s</span></div>
+                    <div class="meta-item">Waktu tersisa: <span id="etaVal">N/A</span></div>
+                </div>
+
+                <div class="console-container">
+                    <div class="console-title">
+                        <span class="console-dot"></span>
+                        <span>Live Logs</span>
+                    </div>
+                    <div class="console-log" id="consoleLog">
+                        <!-- Live log lines will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Success action button -->
+                <button id="openFolderBtn" class="btn btn-secondary" style="display: none;">
+                    📂 BUKA FILE UNDUHAN
+                </button>
+
+                <!-- Direct download button for users -->
+                <a id="directDownloadBtn" class="btn"
+                    style="display: none; text-decoration: none; margin-top: 1rem; background: linear-gradient(135deg, var(--success), #059669); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);"
+                    download>
+                    ⬇️ UNDUH KE HP / PERANGKAT KAMU
+                </a>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            &copy; BARA444
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const btnSpinner = document.getElementById('btnSpinner');
+        const progressContainer = document.getElementById('progressContainer');
+        const statusBadge = document.getElementById('statusBadge');
+        const badgeDot = document.getElementById('badgeDot');
+        const badgeText = document.getElementById('badgeText');
+        const percentText = document.getElementById('percentText');
+        const progressBar = document.getElementById('progressBar');
+        const speedVal = document.getElementById('speedVal');
+        const etaVal = document.getElementById('etaVal');
+        const consoleLog = document.getElementById('consoleLog');
+        const openFolderBtn = document.getElementById('openFolderBtn');
+        const directDownloadBtn = document.getElementById('directDownloadBtn');
+        const qualitySelect = document.getElementById('qualitySelect');
+        const pasteBtn = document.getElementById('pasteBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+
+        let eventSource = null;
+        let currentDownloadId = '';
+
+        function addConsoleLine(text, type = 'normal') {
+            const line = document.createElement('div');
+            line.className = 'console-line ' + type;
+            line.innerText = text;
+            consoleLog.appendChild(line);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        function setStatus(text, type = 'running') {
+            badgeText.innerText = text;
+            statusBadge.className = 'status-badge';
+            badgeDot.className = 'console-dot';
+
+            if (type === 'success') {
+                statusBadge.classList.add('success');
+                badgeDot.style.background = 'var(--success)';
+                badgeDot.style.boxShadow = 'none';
+            } else if (type === 'error') {
+                statusBadge.classList.add('error');
+                badgeDot.style.background = 'var(--error)';
+                badgeDot.style.boxShadow = 'none';
+            } else {
+                badgeDot.classList.add('pulsing');
+                badgeDot.style.background = 'var(--accent)';
+                badgeDot.style.boxShadow = '0 0 8px var(--accent)';
+            }
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            const url = urlInput.value.trim();
+            if (!url) {
+                alert('Tolong masukkan URL video/media dulu, Ugh!');
+                return;
+            }
+
+            // Reset UI
+            downloadBtn.disabled = true;
+            btnSpinner.style.display = 'block';
+            progressContainer.style.display = 'block';
+            consoleLog.innerHTML = '';
+            progressBar.style.width = '0%';
+            percentText.innerText = '0%';
+            speedVal.innerText = '0 KB/s';
+            etaVal.innerText = 'N/A';
+            openFolderBtn.style.display = 'none';
+            directDownloadBtn.style.display = 'none';
+
+            setStatus('Menghubungkan ke sarang media...', 'running');
+            addConsoleLine('[System] Memulai mantra berburu video...', 'info');
+
+            // Close existing event source if any
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            // Start SSE Stream
+            const type = document.querySelector('.hunt-type-btn.active').dataset.type;
+            const quality = qualitySelect.value;
+            const proxy = document.getElementById('proxyInput').value.trim();
+            currentDownloadId = 'dl_' + Math.random().toString(36).substr(2, 9);
+            cancelBtn.style.display = 'flex';
+            
+            let streamUrl = `/stream?url=${encodeURIComponent(url)}&format=${type}&quality=${quality}&id=${currentDownloadId}`;
+            if (proxy) {
+                streamUrl += '&proxy=' + encodeURIComponent(proxy);
+            }
+            eventSource = new EventSource(streamUrl);
+
+            eventSource.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'status') {
+                    setStatus(data.message, 'running');
+                    addConsoleLine('[Status] ' + data.message, 'info');
+                }
+                else if (data.type === 'log') {
+                    addConsoleLine(data.message, 'normal');
+                }
+                else if (data.type === 'progress') {
+                    const percent = data.percent;
+                    progressBar.style.width = percent + '%';
+                    percentText.innerText = Math.round(percent) + '%';
+
+                    if (data.speed) speedVal.innerText = data.speed;
+                    if (data.eta) etaVal.innerText = data.eta;
+
+                    if (percent > 0 && percent < 100) {
+                        setStatus('Sedang menarik video (' + Math.round(percent) + '%)...', 'running');
+                    }
+                }
+                else if (data.type === 'success') {
+                    setStatus('Berhasil! Video berhasil didownload! 🎉', 'success');
+                    addConsoleLine('[Sukses] ' + data.message, 'success');
+                    progressBar.style.width = '100%';
+                    percentText.innerText = '100%';
+
+                    // Show open folder button only on local environment
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        openFolderBtn.style.display = 'flex';
+                    }
+
+                    // Show direct download button for remote devices
+                    if (data.filename) {
+                        directDownloadBtn.href = '/download-file?filename=' + encodeURIComponent(data.filename);
+                        directDownloadBtn.style.display = 'flex';
+                    }
+                }
+                else if (data.type === 'error') {
+                    setStatus('Gagal! Rusa kabur! ❌', 'error');
+                    addConsoleLine('[Error] Terjadi kesalahan: ' + data.message, 'error');
+                }
+                else if (data.type === 'done') {
+                    eventSource.close();
+                    downloadBtn.disabled = false;
+                    btnSpinner.style.display = 'none';
+                    cancelBtn.style.display = 'none';
+                    addConsoleLine('[System] Berburu selesai.', 'info');
+                }
+            };
+
+            eventSource.onerror = function () {
+                setStatus('Koneksi terputus! ❌', 'error');
+                addConsoleLine('[Error] Koneksi Server-Sent Events terputus.', 'error');
+                eventSource.close();
+                downloadBtn.disabled = false;
+                btnSpinner.style.display = 'none';
+                cancelBtn.style.display = 'none';
+            };
+        });
+
+        // Event listener untuk membatalkan download
+        cancelBtn.addEventListener('click', () => {
+            if (!currentDownloadId) return;
+
+            addConsoleLine('[System] Mengirim sinyal pembatalan...', 'info');
+            setStatus('Membatalkan unduhan... 🛑', 'error');
+
+            fetch(`/cancel?id=${currentDownloadId}`)
+                .then(res => res.json())
+                .then(data => {
+                    addConsoleLine('[System] Sinyal pembatalan berhasil terkirim.', 'info');
+                })
+                .catch(err => {
+                    console.error('Gagal mengirim sinyal batal:', err);
+                });
+
+            // Tutup koneksi SSE secara instan
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            // Kembalikan status UI
+            downloadBtn.disabled = false;
+            btnSpinner.style.display = 'none';
+            cancelBtn.style.display = 'none';
+            setStatus('Unduhan dibatalkan! 🛑', 'error');
+            addConsoleLine('[System] Unduhan dibatalkan oleh pengguna.', 'error');
+        });
+
+        openFolderBtn.addEventListener('click', () => {
+            fetch('/open-folder')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status !== 'success') {
+                        alert('Gagal membuka folder: ' + data.message);
+                    }
+                })
+                .catch(err => {
+                    alert('Gagal memanggil mantra buka folder: ' + err);
+                });
+        });
+
+        // Toggle hunt type
+        const huntTypeBtns = document.querySelectorAll('.hunt-type-btn');
+        huntTypeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (downloadBtn.disabled) return; // Jangan ganti tipe pas lagi unduh
+                huntTypeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Ubah teks tombol download & opsi kualitas secara dinamis!
+                const type = btn.dataset.type;
+                const btnText = document.querySelector('.btn-text');
+                if (type === 'audio') {
+                    btnText.innerText = 'Download Lagu! (MP3) 🎵';
+                    qualitySelect.innerHTML = `
+                        <option value="320" selected>Ultra High (320 kbps)</option>
+                        <option value="192">High Quality (192 kbps)</option>
+                        <option value="128">Standard (128 kbps)</option>
+                        <option value="96">Rendah (96 kbps)</option>
+                    `;
+                } else {
+                    btnText.innerText = 'Download Video! (MP4) 📹';
+                    qualitySelect.innerHTML = `
+                        <option value="best" selected>Kualitas Terbaik (Maksimal)</option>
+                        <option value="1080">Full HD (1080p)</option>
+                        <option value="720">HD (720p)</option>
+                        <option value="480">Standar (480p)</option>
+                        <option value="360">Rendah (360p)</option>
+                    `;
+                }
+            });
+        });
+
+        // Deteksi domain untuk menyembunyikan kualitas jika platform tidak mendukung
+        const qualityContainer = document.getElementById('qualityContainer');
+        function updateQualityVisibility() {
+            const url = urlInput.value.trim().toLowerCase();
+            if (!url) {
+                // Jika kosong, tampilkan saja secara default
+                qualityContainer.style.display = 'flex';
+                return;
+            }
+
+            // Platform yang didukung pilihan kualitasnya (YouTube dan Bstation)
+            const hasQuality =
+                url.includes('youtube.com') ||
+                url.includes('youtu.be') ||
+                url.includes('bilibili.tv') ||
+                url.includes('bilibili.com') ||
+                url.includes('bstation');
+
+            if (hasQuality) {
+                qualityContainer.style.display = 'flex';
+            } else {
+                qualityContainer.style.display = 'none';
+            }
+        }
+
+        function updatePasteBtnState() {
+            const hasText = urlInput.value.trim().length > 0;
+            if (hasText) {
+                pasteBtn.innerText = 'HAPUS';
+                pasteBtn.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15))';
+                pasteBtn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                pasteBtn.style.color = '#f87171';
+            } else {
+                pasteBtn.innerText = 'TEMPEL';
+                pasteBtn.style.background = 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(217, 70, 239, 0.2))';
+                pasteBtn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                pasteBtn.style.color = 'white';
+            }
+        }
+
+        urlInput.addEventListener('input', () => {
+            updateQualityVisibility();
+            updatePasteBtnState();
+        });
+        urlInput.addEventListener('paste', () => {
+            setTimeout(() => {
+                updateQualityVisibility();
+                updatePasteBtnState();
+            }, 50);
+        });
+
+        // Tempel otomatis dari Clipboard API atau Hapus isi input
+        pasteBtn.addEventListener('click', async () => {
+            const isHapus = pasteBtn.innerText === 'HAPUS';
+            if (isHapus) {
+                urlInput.value = '';
+                updateQualityVisibility();
+                updatePasteBtnState();
+                addConsoleLine('[System] Kolom input dibersihkan.', 'info');
+            } else {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text) {
+                        urlInput.value = text.trim();
+                        updateQualityVisibility();
+                        updatePasteBtnState();
+                        addConsoleLine('[System] Berhasil menempel alamat dari clipboard!', 'success');
+                    } else {
+                        alert('Clipboard perangkat kamu kosong, Ugh!');
+                    }
+                } catch (err) {
+                    alert('Gagal membaca clipboard otomatis. Izin browser ditolak atau tidak didukung di perangkat ini. Silakan tempel manual, Ugh!');
+                    console.error(err);
+                }
+            }
+        });
+
+        function toggleAdvancedOptions() {
+            const container = document.getElementById('advancedOptionsContainer');
+            const arrow = document.getElementById('advancedArrow');
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                arrow.innerText = '▲';
+            } else {
+                container.style.display = 'none';
+                arrow.innerText = '▼';
+            }
+        }
+    </script>
+</body>
+
+</html>

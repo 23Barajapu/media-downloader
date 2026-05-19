@@ -1,0 +1,9 @@
+Unduhan_Media/
+__pycache__/
+*.pyc
+.DS_Store
+*.part
+*.ytdl
+*.exe
+cookies.txt
+
