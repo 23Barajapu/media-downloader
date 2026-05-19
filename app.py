@@ -7,6 +7,17 @@ import time
 import yt_dlp
 import urllib.request
 from flask import Flask, render_template, request, Response, send_from_directory
+
+# Tulis cookies.txt secara dinamis jika ada secret COOKIES_CONTENT dari Hugging Face
+cookies_content = os.environ.get("COOKIES_CONTENT", "")
+if cookies_content.strip():
+    try:
+        with open("cookies.txt", "w", encoding="utf-8") as f:
+            f.write(cookies_content)
+        print("[Cookies] cookies.txt berhasil dibuat dari environment variable.")
+    except Exception as e:
+        print(f"[Cookies] Gagal menulis cookies.txt: {e}")
+
 # Patch global untuk menangani error OpenSSL 3.x [SSL: UNEXPECTED_EOF_WHILE_READING]
 orig_create_default_context = ssl.create_default_context
 def patched_create_default_context(*args, **kwargs):
