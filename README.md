@@ -1,12 +1,3 @@
----
-title: Media Downloader
-emoji: 🦖
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_port: 7860
----
-
 # 🦖 Universal Media Downloader
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
