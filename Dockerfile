@@ -7,21 +7,28 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /app
+# Buat user non-root (Wajib untuk Hugging Face Docker Spaces)
+RUN useradd -m -u 1000 user
+USER user
+
+# Set environment variable untuk user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
+
+WORKDIR $HOME/app
 
 # Copy requirements dan install
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --chown=user requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
 
 # Copy seluruh source code
-COPY . .
+COPY --chown=user . .
 
-# Buat folder penyimpanan media agar tidak eror
+# Buat folder penyimpanan media
 RUN mkdir -p Unduhan_Media
 
-# Expose port 7860 (Hugging Face Spaces strict port, works perfectly on Render too)
+# Expose port 7860
 EXPOSE 7860
 
-# Jalankan aplikasi menggunakan gunicorn dengan setelan thread untuk SSE
-CMD ["gunicorn", "--workers=1", "--threads=8", "--timeout=120", "--bind", "0.0.0.0:7860", "app:app"]
+# Jalankan aplikasi menggunakan gunicorn
+CMD ["python", "-m", "gunicorn", "--workers=1", "--threads=8", "--timeout=120", "--bind", "0.0.0.0:7860", "app:app"]
