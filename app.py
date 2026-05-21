@@ -18,15 +18,7 @@ if cookies_content.strip():
     except Exception as e:
         print(f"[Cookies] Gagal menulis cookies.txt: {e}")
 
-# Patch global untuk menangani error OpenSSL 3.x [SSL: UNEXPECTED_EOF_WHILE_READING]
-orig_create_default_context = ssl.create_default_context
-def patched_create_default_context(*args, **kwargs):
-    context = orig_create_default_context(*args, **kwargs)
-    if hasattr(ssl, "OP_IGNORE_UNEXPECTED_EOF"):
-        # Abaikan pemutusan koneksi sepihak yang memicu SSLEOFError
-        context.options |= ssl.OP_IGNORE_UNEXPECTED_EOF
-    return context
-ssl.create_default_context = patched_create_default_context
+# Patch SSL dihapus karena sering dianggap malware oleh scanner Hugging Face
 
 app = Flask(__name__)
 
@@ -389,14 +381,7 @@ def stream_download():
 
 @app.route('/open-folder')
 def open_folder():
-    folder_path = os.path.abspath("Unduhan_Media")
-    if os.path.exists(folder_path):
-        try:
-            os.startfile(folder_path)
-            return {"status": "success"}
-        except AttributeError:
-            return {"status": "success", "message": "Berjalan di cloud server."}
-    return {"status": "error", "message": "Folder unduhan belum dibuat!"}, 404
+    return {"status": "error", "message": "Fitur buka folder dinonaktifkan (Keamanan Hugging Face)."}, 403
 
 @app.route('/download-file')
 def download_file():
