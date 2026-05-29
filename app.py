@@ -282,8 +282,7 @@ def stream_download():
                     
                 q.put({"type": "status", "message": f"Menghubungkan ke server media ({mode_str})..."})
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    # ydl.download([video_url])
-                    pass
+                    ydl.download([video_url])
                 
                 latest_file = get_latest_downloaded_file(output_folder)
                 q.put({
@@ -323,8 +322,7 @@ def stream_download():
                             
                             try:
                                 with yt_dlp.YoutubeDL(try_opts) as ydl:
-                                    # ydl.download([video_url])
-                                    pass
+                                    ydl.download([video_url])
                                 success = True
                                 break
                             except Exception as proxy_err:
