@@ -31,4 +31,4 @@ RUN mkdir -p Unduhan_Media
 EXPOSE 7860
 
 # Jalankan aplikasi menggunakan gunicorn
-CMD ["python", "-m", "gunicorn", "--workers=1", "--threads=8", "--timeout=120", "--bind", "0.0.0.0:7860", "app:app"]
+CMD ["python", "app.py"]
