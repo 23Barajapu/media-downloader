@@ -1,100 +1,18 @@
-import queue
-import threading
-import json
 import os
-import ssl
-import time
-import yt_dlp
 import urllib.request
-from flask import Flask, render_template, request, Response, send_from_directory
+import yt_dlp
+import gradio as gr
 
-# Tulis cookies.txt secara dinamis jika ada secret COOKIES_CONTENT dari Hugging Face
+# Tulis cookies.txt dinamis jika ada env COOKIES_CONTENT
 cookies_content = os.environ.get("COOKIES_CONTENT", "")
 if cookies_content.strip():
     try:
         with open("cookies.txt", "w", encoding="utf-8") as f:
             f.write(cookies_content)
-        print("[Cookies] cookies.txt berhasil dibuat dari environment variable.")
+        print("[Cookies] cookies.txt dibuat.")
     except Exception as e:
-        print(f"[Cookies] Gagal menulis cookies.txt: {e}")
+        print(f"[Cookies] Gagal: {e}")
 
-# Patch SSL dihapus karena sering dianggap malware oleh scanner Hugging Face
-
-app = Flask(__name__)
-
-@app.route('/healthz')
-def healthz():
-    return {"status": "ok"}, 200
-
-# ============================================================
-# SELF-PING KEEP-ALIVE: Mencegah Platform menidurkan App
-# secara otomatis karena dianggap idle/tidak aktif.
-# ============================================================
-def _keep_alive_pinger():
-    """Thread daemon yang mem-ping URL App ini setiap 25 menit."""
-    time.sleep(60)
-    
-    space_host = os.environ.get("SPACE_HOST", "")
-    render_url = os.environ.get("RENDER_EXTERNAL_URL", "")
-    
-    if space_host:
-        ping_url = f"https://{space_host}/"
-    elif render_url:
-        ping_url = render_url
-    else:
-        print("[KeepAlive] SPACE_HOST / RENDER_EXTERNAL_URL tidak ditemukan. Self-ping dinonaktifkan.")
-        return
-
-    print(f"[KeepAlive] Self-ping aktif. Target: {ping_url} (setiap 25 menit)")
-    
-    while True:
-        try:
-            req = urllib.request.Request(
-                ping_url,
-                headers={"User-Agent": "App-KeepAlive/1.0"}
-            )
-            with urllib.request.urlopen(req, timeout=15) as response:
-                print(f"[KeepAlive] Ping OK - Status: {response.status}")
-        except Exception as e:
-            print(f"[KeepAlive] Ping gagal (akan coba lagi): {e}")
-        
-        time.sleep(25 * 60)
-
-# Jalankan pinger sebagai daemon thread (otomatis mati saat server mati)
-_pinger_thread = threading.Thread(target=_keep_alive_pinger, daemon=True)
-_pinger_thread.start()
-
-# Set untuk menyimpan ID download yang dibatalkan
-canceled_downloads = set()
-
-# Logger kustom untuk menangkap log dari yt-dlp dan membagikannya ke antrian (Queue)
-class SSELogger:
-    def __init__(self, q, download_id=None):
-        self.q = q
-        self.download_id = download_id
-
-    def debug(self, msg):
-        if self.download_id and self.download_id in canceled_downloads:
-            raise Exception("DOWNLOAD_CANCELED")
-        msg_str = str(msg).strip()
-        if msg_str:
-            self.q.put({"type": "log", "message": msg_str})
-
-    def warning(self, msg):
-        if self.download_id and self.download_id in canceled_downloads:
-            raise Exception("DOWNLOAD_CANCELED")
-        msg_str = str(msg).strip()
-        if msg_str:
-            self.q.put({"type": "log", "message": f"[WARNING] {msg_str}"})
-
-    def error(self, msg):
-        if self.download_id and self.download_id in canceled_downloads:
-            raise Exception("DOWNLOAD_CANCELED")
-        msg_str = str(msg).strip()
-        if msg_str:
-            self.q.put({"type": "error", "message": msg_str})
-
-# Mengambil list proxy Indonesia gratis secara dinamis dari API publik
 def get_free_indonesian_proxy():
     api_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=ID&ssl=all&anonymity=all"
     try:
@@ -103,86 +21,9 @@ def get_free_indonesian_proxy():
             proxies_text = response.read().decode('utf-8').strip()
             if proxies_text:
                 return [p.strip() for p in proxies_text.split('\n') if p.strip()]
-    except Exception as e:
-        print(f"[ProxyScrape] Gagal mengambil list: {e}")
-    
-    fallback_url = "https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/http/countries/id/data.txt"
-    try:
-        req = urllib.request.Request(fallback_url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            proxies_text = response.read().decode('utf-8').strip()
-            if proxies_text:
-                return [p.strip() for p in proxies_text.split('\n') if p.strip()]
-    except Exception as e:
-        print(f"[Fallback Proxy] Gagal mengambil list: {e}")
-        
+    except Exception:
+        pass
     return []
-
-# Hook kustom untuk memantau progres download secara real-time
-def make_progress_hook(q, download_id=None):
-    def progress_hook(d):
-        if download_id and download_id in canceled_downloads:
-            raise Exception("DOWNLOAD_CANCELED")
-            
-        if d['status'] == 'downloading':
-            downloaded = d.get('downloaded_bytes', 0)
-            total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
-            if total > 0:
-                percent = round((downloaded / total) * 100, 1)
-            else:
-                percent_str = d.get('_percent_str', '0.0%').replace('%', '').strip()
-                try:
-                    percent = float(percent_str)
-                except ValueError:
-                    percent = 0.0
-            
-            speed_bytes = d.get('speed')
-            elapsed = d.get('elapsed', 0)
-            if speed_bytes is None and elapsed > 0 and downloaded > 0:
-                speed_bytes = downloaded / elapsed
-                
-            if speed_bytes is not None and speed_bytes > 0:
-                if speed_bytes > 1024 * 1024:
-                    speed = f"{speed_bytes / (1024 * 1024):.2f} MB/s"
-                elif speed_bytes > 1024:
-                    speed = f"{speed_bytes / 1024:.2f} KB/s"
-                else:
-                    speed = f"{speed_bytes:.2f} B/s"
-            else:
-                speed_str = d.get('_speed_str', '')
-                speed = speed_str.strip() if speed_str else 'Menghitung...'
-            
-            eta_seconds = d.get('eta')
-            if eta_seconds is None and speed_bytes is not None and speed_bytes > 0 and total > downloaded:
-                eta_seconds = (total - downloaded) / speed_bytes
-                
-            if eta_seconds is not None and eta_seconds > 0:
-                minutes = int(eta_seconds) // 60
-                seconds = int(eta_seconds) % 60
-                if minutes > 0:
-                    eta = f"{minutes}m {seconds}s"
-                else:
-                    eta = f"{seconds}s"
-            else:
-                eta_str = d.get('_eta_str', '')
-                eta = eta_str.strip() if eta_str else 'N/A'
-            
-            filename = os.path.basename(d.get('filename', ''))
-            
-            q.put({
-                "type": "progress",
-                "percent": percent,
-                "speed": speed,
-                "eta": eta,
-                "filename": filename
-            })
-        elif d['status'] == 'finished':
-            q.put({
-                "type": "progress",
-                "percent": 100.0,
-                "status": "finished"
-            })
-    return progress_hook
 
 def get_latest_downloaded_file(folder):
     if not os.path.exists(folder):
@@ -190,215 +31,110 @@ def get_latest_downloaded_file(folder):
     files = [os.path.join(folder, f) for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
     if not files:
         return None
-    latest_file = max(files, key=os.path.getmtime)
-    return os.path.basename(latest_file)
+    return max(files, key=os.path.getmtime)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+def download_media(video_url, format_type, quality, progress=gr.Progress()):
+    if not video_url or not video_url.strip():
+        return None, "❌ URL tidak boleh kosong!"
 
-@app.route('/stream')
-def stream_download():
-    video_url = request.args.get('url')
-    format_type = request.args.get('format', 'video')
-    quality = request.args.get('quality', 'best')
-    download_id = request.args.get('id', '')
-    proxy = request.args.get('proxy', '').strip()
-    if not video_url:
-        return Response("data: " + json.dumps({"type": "error", "message": "URL tidak boleh kosong!"}) + "\n\n", mimetype="text/event-stream")
+    output_folder = "Unduhan_Media"
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder, exist_ok=True)
 
-    def event_generator():
-        q = queue.Queue()
+    progress(0.1, desc="Menyiapkan unduhan...")
 
-        def start_download():
-            output_folder = "Unduhan_Media"
-            if not os.path.exists(output_folder):
-                os.makedirs(output_folder)
-            
-            if format_type == 'audio':
-                preferred_quality = quality if quality in ['320', '192', '128', '96'] else '192'
-                ydl_opts = {
-                    'format': 'bestaudio/best',
-                    'outtmpl': os.path.join(output_folder, '%(title)s.%(ext)s'),
-                    'nocheckcertificate': True,
-                    'socket_timeout': 30,
-                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'logger': SSELogger(q, download_id),
-                    'progress_hooks': [make_progress_hook(q, download_id)],
-                    'extractor_args': {
-                        'youtube': {
-                            'player_client': ['android', 'ios']
-                        }
-                    },
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': 'mp3',
-                        'preferredquality': preferred_quality,
-                    }],
-                }
-                mode_str = f"Lagu (MP3 - {preferred_quality}kbps)"
-            else:
-                if quality == '1080':
-                    fmt = 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best'
-                    mode_str = "Video (MP4 - 1080p)"
-                elif quality == '720':
-                    fmt = 'bestvideo[height<=720]+bestaudio/best[height<=720]/best'
-                    mode_str = "Video (MP4 - 720p)"
-                elif quality == '480':
-                    fmt = 'bestvideo[height<=480]+bestaudio/best[height<=480]/best'
-                    mode_str = "Video (MP4 - 480p)"
-                elif quality == '360':
-                    fmt = 'bestvideo[height<=360]+bestaudio/best[height<=360]/best'
-                    mode_str = "Video (MP4 - 360p)"
-                else:
-                    fmt = 'bestvideo+bestaudio/best'
-                    mode_str = "Video (MP4 - Kualitas Terbaik)"
-
-                ydl_opts = {
-                    'format': fmt,
-                    'merge_output_format': 'mp4',
-                    'outtmpl': os.path.join(output_folder, '%(title)s.%(ext)s'),
-                    'nocheckcertificate': True,
-                    'socket_timeout': 30,
-                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'logger': SSELogger(q, download_id),
-                    'progress_hooks': [make_progress_hook(q, download_id)],
-                    'extractor_args': {
-                        'youtube': {
-                            'player_client': ['android', 'ios']
-                        }
-                    },
-                }
-
-            try:
-                if os.path.exists("cookies.txt"):
-                    ydl_opts['cookiefile'] = "cookies.txt"
-                    
-                if proxy:
-                    formatted_proxy = proxy
-                    if not (proxy.startswith("http://") or proxy.startswith("https://") or proxy.startswith("socks5://") or proxy.startswith("socks4://")):
-                        formatted_proxy = "http://" + proxy
-                    ydl_opts['proxy'] = formatted_proxy
-                    
-                q.put({"type": "status", "message": f"Menghubungkan ke server media ({mode_str})..."})
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([video_url])
-                
-                latest_file = get_latest_downloaded_file(output_folder)
-                q.put({
-                    "type": "success", 
-                    "message": f"{mode_str} berhasil didownload dan disimpan!",
-                    "filename": latest_file
-                })
-            except Exception as e:
-                err_msg = str(e)
-                is_bstation = any(domain in video_url.lower() for domain in ['bilibili', 'bstation', 'b.tv'])
-                is_youtube = any(domain in video_url.lower() for domain in ['youtube.com', 'youtu.be'])
-                
-                should_bypass = False
-                bypass_reason = ""
-                if not proxy:
-                    if is_bstation and ("版权地区" in err_msg or "NoneType" in err_msg or "blocked" in err_msg.lower() or "limit" in err_msg.lower() or "restricted" in err_msg.lower()):
-                        should_bypass = True
-                        bypass_reason = "Batas wilayah terdeteksi! Mengaktifkan Auto-Proxy Indonesia..."
-                    elif is_youtube and ("confirm you" in err_msg.lower() or "bot" in err_msg.lower() or "captcha" in err_msg.lower() or "403" in err_msg.lower() or "forbidden" in err_msg.lower() or "sign in" in err_msg.lower()):
-                        should_bypass = True
-                        bypass_reason = "Blokir bot YouTube terdeteksi! Mengaktifkan Auto-Proxy..."
-
-                if should_bypass:
-                    q.put({"type": "status", "message": bypass_reason})
-                    q.put({"type": "log", "message": "[Auto-Proxy] Mengambil daftar proxy gratis..."})
-                    
-                    proxies = get_free_indonesian_proxy()
-                    if proxies:
-                        success = False
-                        for idx, attempt_proxy in enumerate(proxies[:4]):
-                            q.put({"type": "status", "message": f"Bypass: Mencoba Proxy {idx+1}/{min(4, len(proxies))}..."})
-                            q.put({"type": "log", "message": f"[Auto-Proxy] Mencoba terhubung melalui http://{attempt_proxy}"})
-                            
-                            try_opts = ydl_opts.copy()
-                            try_opts['proxy'] = f"http://{attempt_proxy}"
-                            try_opts['socket_timeout'] = 8
-                            
-                            try:
-                                with yt_dlp.YoutubeDL(try_opts) as ydl:
-                                    ydl.download([video_url])
-                                success = True
-                                break
-                            except Exception as proxy_err:
-                                q.put({"type": "log", "message": f"[Auto-Proxy] Proxy {attempt_proxy} gagal: {proxy_err}"})
-                                
-                        if success:
-                            latest_file = get_latest_downloaded_file(output_folder)
-                            q.put({
-                                "type": "success", 
-                                "message": f"{mode_str} berhasil didownload melalui Auto-Proxy!",
-                                "filename": latest_file
-                            })
-                        else:
-                            q.put({"type": "error", "message": "Gagal! Semua Auto-Proxy sedang sibuk/offline. Silakan coba lagi nanti!"})
-                    else:
-                        q.put({"type": "error", "message": "Gagal mengambil daftar Auto-Proxy. Silakan coba beberapa saat lagi!"})
-                        
-                elif "DOWNLOAD_CANCELED" in err_msg:
-                    q.put({"type": "status", "message": "Unduhan dibatalkan oleh Anda!"})
-                    q.put({"type": "log", "message": "[System] Unduhan dibatalkan."})
-                else:
-                    q.put({"type": "error", "message": err_msg})
-            finally:
-                if download_id in canceled_downloads:
-                    try:
-                        canceled_downloads.remove(download_id)
-                    except KeyError:
-                        pass
-                q.put({"type": "done"})
-
-        download_thread = threading.Thread(target=start_download)
-        download_thread.start()
-
-        while True:
-            try:
-                item = q.get(timeout=10.0)
-                yield f"data: {json.dumps(item)}\n\n"
-                
-                if item.get("type") == "done":
-                    break
-            except queue.Empty:
-                if not download_thread.is_alive():
-                    break
-                yield ": keep-alive ping\n\n"
-
-    return Response(
-        event_generator(),
-        mimetype="text/event-stream",
-        headers={
-            'Cache-Control': 'no-cache',
-            'Content-Type': 'text/event-stream',
-            'Connection': 'keep-alive',
-            'X-Accel-Buffering': 'no'
+    if format_type == "Audio (MP3)":
+        pref_q = quality.replace("kbps", "").strip() if "kbps" in quality else "192"
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': os.path.join(output_folder, '%(title)s.%(ext)s'),
+            'nocheckcertificate': True,
+            'socket_timeout': 30,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'extractor_args': {'youtube': {'player_client': ['android', 'ios']}},
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': pref_q,
+            }],
         }
+        mode_str = f"Lagu (MP3 - {pref_q}kbps)"
+    else:
+        q_map = {
+            '1080p': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+            '720p': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+            '480p': 'bestvideo[height<=480]+bestaudio/best[height<=480]/best',
+            '360p': 'bestvideo[height<=360]+bestaudio/best[height<=360]/best',
+        }
+        fmt = q_map.get(quality, 'bestvideo+bestaudio/best')
+        ydl_opts = {
+            'format': fmt,
+            'merge_output_format': 'mp4',
+            'outtmpl': os.path.join(output_folder, '%(title)s.%(ext)s'),
+            'nocheckcertificate': True,
+            'socket_timeout': 30,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'extractor_args': {'youtube': {'player_client': ['android', 'ios']}},
+        }
+        mode_str = f"Video ({quality})"
+
+    if os.path.exists("cookies.txt"):
+        ydl_opts['cookiefile'] = "cookies.txt"
+
+    progress(0.3, desc=f"Mendownload {mode_str}...")
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([video_url])
+
+        file_path = get_latest_downloaded_file(output_folder)
+        progress(1.0, desc="Selesai!")
+        return file_path, f"✅ Sukses! {mode_str} berhasil diunduh."
+    except Exception as e:
+        err_msg = str(e)
+        progress(0.5, desc="Mencoba Bypass Proxy...")
+        proxies = get_free_indonesian_proxy()
+        if proxies:
+            for attempt_proxy in proxies[:3]:
+                try:
+                    try_opts = ydl_opts.copy()
+                    try_opts['proxy'] = f"http://{attempt_proxy}"
+                    try_opts['socket_timeout'] = 10
+                    with yt_dlp.YoutubeDL(try_opts) as ydl:
+                        ydl.download([video_url])
+                    file_path = get_latest_downloaded_file(output_folder)
+                    progress(1.0, desc="Selesai via Proxy!")
+                    return file_path, f"✅ Sukses via Auto-Proxy! {mode_str}"
+                except Exception:
+                    continue
+        return None, f"❌ Gagal mendownload: {err_msg}"
+
+def update_qualities(format_type):
+    if format_type == "Audio (MP3)":
+        return gr.Dropdown(choices=["320kbps", "192kbps", "128kbps", "96kbps"], value="192kbps", label="Kualitas Audio")
+    return gr.Dropdown(choices=["Terbaik", "1080p", "720p", "480p", "360p"], value="Terbaik", label="Kualitas Video")
+
+with gr.Blocks(title="Media Downloader") as demo:
+    gr.Markdown("# 🎬 Universal Media Downloader")
+    gr.Markdown("Download video & audio dari YouTube, TikTok, Facebook, Instagram, Bilibili, dll.")
+
+    with gr.Row():
+        with gr.Column():
+            url_input = gr.Textbox(label="URL Media", placeholder="https://www.youtube.com/watch?v=...")
+            fmt_input = gr.Radio(choices=["Video (MP4)", "Audio (MP3)"], value="Video (MP4)", label="Format Output")
+            quality_input = gr.Dropdown(choices=["Terbaik", "1080p", "720p", "480p", "360p"], value="Terbaik", label="Kualitas Video")
+            btn_submit = gr.Button("🚀 Download Sekarang", variant="primary")
+
+        with gr.Column():
+            status_output = gr.Textbox(label="Status Unduhan", interactive=False)
+            file_output = gr.File(label="Hasil Unduhan (Klik untuk Simpan)")
+
+    fmt_input.change(fn=update_qualities, inputs=[fmt_input], outputs=[quality_input])
+    btn_submit.click(
+        fn=download_media,
+        inputs=[url_input, fmt_input, quality_input],
+        outputs=[file_output, status_output]
     )
 
-@app.route('/open-folder')
-def open_folder():
-    return {"status": "error", "message": "Fitur buka folder dinonaktifkan (Keamanan Hugging Face)."}, 403
-
-@app.route('/download-file')
-def download_file():
-    filename = request.args.get('filename')
-    if not filename:
-        return "Nama file kosong!", 400
-        
-    folder_path = os.path.abspath("Unduhan_Media")
-    return send_from_directory(folder_path, filename, as_attachment=True)
-
-@app.route('/cancel')
-def cancel_download():
-    download_id = request.args.get('id')
-    if download_id:
-        canceled_downloads.add(download_id)
-        return {"status": "success", "message": f"Download {download_id} canceled"}
-    return {"status": "error", "message": "No download ID provided"}, 400
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+if __name__ == "__main__":
+    demo.launch(server_name="0.0.0.0", server_port=7860)
