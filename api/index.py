@@ -42,10 +42,12 @@ def get_free_indonesian_proxy():
     return []
 
 @app.route('/api/healthz', methods=['GET'])
+@app.route('/healthz', methods=['GET'])
 def healthz():
     return jsonify({"status": "ok", "supabase": supabase is not None}), 200
 
 @app.route('/api/download', methods=['POST'])
+@app.route('/download', methods=['POST'])
 def handle_download():
     data = request.get_json() or {}
     video_url = data.get('url', '').strip()
