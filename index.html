@@ -378,6 +378,13 @@
                     if (data.download_url) {
                         downloadLink.href = data.download_url;
                         downloadLink.style.display = 'block';
+                        // Auto-trigger download ke perangkat
+                        const a = document.createElement('a');
+                        a.href = data.download_url;
+                        a.download = data.filename || 'media';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
                     }
                 } else {
                     progressBar.style.width = '0%';
