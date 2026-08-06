@@ -5,14 +5,14 @@ import streamlit as st
 
 st.set_page_config(page_title="Universal Media Hunter", page_icon="🦖", layout="centered")
 
-# Inject Custom CSS (Glassmorphism, Dark Mode, Google Fonts, Glow Effects)
+# Inject Custom CSS - High Contrast, Clear Typography, Comfortable UX
 custom_css = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
 html, body, [data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #0b0813 0%, #171128 50%, #0d0614 100%) !important;
-    color: #f3f4f6 !important;
+    background: linear-gradient(135deg, #0f0c1b 0%, #1a162b 50%, #110a1f 100%) !important;
+    color: #ffffff !important;
     font-family: 'Outfit', sans-serif !important;
 }
 
@@ -20,44 +20,85 @@ html, body, [data-testid="stAppViewContainer"] {
     background: transparent !important;
 }
 
-/* Glassmorphic card styling */
+/* Glassmorphic main container */
 .main .block-container {
-    background: rgba(255, 255, 255, 0.03) !important;
-    backdrop-filter: blur(25px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 24px !important;
-    padding: 2.5rem !important;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(139, 92, 246, 0.15) !important;
-    margin-top: 2rem !important;
+    background: rgba(30, 24, 50, 0.6) !important;
+    backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 20px !important;
+    padding: 2.5rem 2rem !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(139, 92, 246, 0.2) !important;
+    margin-top: 1.5rem !important;
+    max-width: 680px !important;
 }
 
+/* High Contrast Labels */
+label, [data-testid="stWidgetLabel"], [data-testid="stMarkdownContainer"] p {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 1.05rem !important;
+    letter-spacing: 0.3px !important;
+}
+
+/* Header styling */
 h1 {
     font-family: 'Outfit', sans-serif !important;
     font-weight: 800 !important;
-    background: linear-gradient(135deg, #ffffff 0%, #a78bfa 50%, #d946ef 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #ffffff !important;
     text-align: center !important;
-    font-size: 2.5rem !important;
+    font-size: 2.3rem !important;
+    margin-bottom: 0.3rem !important;
 }
 
 .stCaption {
     text-align: center !important;
-    color: #9ca3af !important;
-    font-size: 1rem !important;
+    color: #d1d5db !important;
+    font-size: 0.95rem !important;
+    margin-bottom: 1.5rem !important;
 }
 
-/* Custom Input Styling */
+/* Text Input Styling */
 input[type="text"] {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    border-radius: 12px !important;
-    color: #ffffff !important;
-    font-size: 1.05rem !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-weight: 500 !important;
+    font-size: 1rem !important;
+    border-radius: 10px !important;
+    border: 2px solid #8b5cf6 !important;
+    padding: 0.6rem 1rem !important;
 }
-input[type="text"]:focus {
-    border-color: #8b5cf6 !important;
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.4) !important;
+
+/* Selectbox Dropdown Styling */
+div[data-baseweb="select"] > div {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-radius: 10px !important;
+    border: 2px solid #8b5cf6 !important;
+    font-weight: 600 !important;
+}
+div[data-baseweb="select"] span {
+    color: #111827 !important;
+    font-weight: 600 !important;
+}
+
+/* Radio Group Box */
+div[role="radiogroup"] {
+    background: rgba(255, 255, 255, 0.08) !important;
+    padding: 10px 14px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    display: flex !important;
+    gap: 20px !important;
+}
+
+div[role="radiogroup"] label {
+    background: transparent !important;
+}
+
+div[role="radiogroup"] label p {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
 }
 
 /* Primary Button Styling */
@@ -66,15 +107,15 @@ div.stButton > button {
     color: #ffffff !important;
     font-weight: 700 !important;
     font-size: 1.1rem !important;
-    border-radius: 14px !important;
+    border-radius: 12px !important;
     border: none !important;
     padding: 0.75rem 1.5rem !important;
-    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4) !important;
-    transition: all 0.3s ease !important;
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
 }
 div.stButton > button:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 12px 30px rgba(217, 70, 239, 0.6) !important;
+    box-shadow: 0 10px 25px rgba(217, 70, 239, 0.7) !important;
 }
 
 /* Download Button Styling */
@@ -83,19 +124,16 @@ div[data-testid="stDownloadButton"] > button {
     color: #ffffff !important;
     font-weight: 700 !important;
     font-size: 1.1rem !important;
-    border-radius: 14px !important;
-    border: none !important;
-    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4) !important;
-}
-
-/* Selectbox & Radio */
-div[role="radiogroup"] {
-    background: rgba(255, 255, 255, 0.04) !important;
-    padding: 8px !important;
     border-radius: 12px !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border: none !important;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5) !important;
 }
 
+/* Status Alert boxes */
+.stAlert {
+    border-radius: 10px !important;
+    font-weight: 500 !important;
+}
 </style>
 """
 st.markdown(custom_css, unsafe_allow_html=True)
@@ -130,9 +168,7 @@ def get_latest_downloaded_file(folder):
     return max(files, key=os.path.getmtime)
 
 st.markdown("<h1>🦖 Universal Media Hunter</h1>", unsafe_allow_html=True)
-st.caption("Unduh video & audio dari YouTube, TikTok, Facebook, Instagram, Bilibili, dan 1000+ situs lainnya")
-
-st.markdown("<br>", unsafe_allow_html=True)
+st.caption("Unduh video & audio dari YouTube, TikTok, Facebook, Instagram, Bilibili, dll.")
 
 video_url = st.text_input("🔗 Paste URL Video / Media", placeholder="https://www.youtube.com/watch?v=...")
 format_type = st.radio("⚡ Format Output", ["Video (MP4)", "Audio (MP3)"], horizontal=True)
@@ -142,7 +178,7 @@ if format_type == "Audio (MP3)":
 else:
     quality = st.selectbox("🎬 Kualitas Video", ["Terbaik", "1080p", "720p", "480p", "360p"], index=0)
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
 if st.button("🚀 Download Sekarang", type="primary", use_container_width=True):
     if not video_url or not video_url.strip():
