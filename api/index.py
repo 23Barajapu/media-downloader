@@ -41,6 +41,14 @@ def get_free_indonesian_proxy():
         pass
     return []
 
+@app.route('/', methods=['GET'])
+def index_page():
+    index_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'index.html')
+    if os.path.exists(index_path):
+        with open(index_path, 'r', encoding='utf-8') as f:
+            return f.read(), 200, {'Content-Type': 'text/html; charset=utf-8'}
+    return "Universal Media Downloader API Ready", 200
+
 @app.route('/api/healthz', methods=['GET'])
 @app.route('/healthz', methods=['GET'])
 def healthz():
