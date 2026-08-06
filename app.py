@@ -31,8 +31,13 @@ def get_latest_downloaded_file(folder):
     files = [os.path.join(folder, f) for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
     if not files:
         return None
-    return max(files, key=os.path.getmtime)
+try:
+    import spaces
+    gpu_decorator = spaces.GPU
+except Exception:
+    gpu_decorator = lambda func: func
 
+@gpu_decorator
 def download_media(video_url, format_type, quality, progress=gr.Progress()):
     if not video_url or not video_url.strip():
         return None, "❌ URL tidak boleh kosong!"
