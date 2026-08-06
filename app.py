@@ -198,7 +198,8 @@ if st.button("🚀 Download Sekarang", type="primary", use_container_width=True)
                 'nocheckcertificate': True,
                 'socket_timeout': 30,
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'extractor_args': {'youtube': {'player_client': ['android', 'ios']}},
+                'extractor_args': {'youtube': {'player_client': ['mweb', 'web', 'tvhtml5']}},
+                'geo_bypass': True,
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
@@ -221,7 +222,8 @@ if st.button("🚀 Download Sekarang", type="primary", use_container_width=True)
                 'nocheckcertificate': True,
                 'socket_timeout': 30,
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'extractor_args': {'youtube': {'player_client': ['android', 'ios']}},
+                'extractor_args': {'youtube': {'player_client': ['mweb', 'web', 'tvhtml5']}},
+                'geo_bypass': True,
             }
             mode_str = f"Video ({quality})"
 
