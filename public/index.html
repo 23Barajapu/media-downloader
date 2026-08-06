@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Media Hunter - Vercel & Supabase Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0b0813 0%, #171128 50%, #0d0614 100%);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --secondary: #d946ef;
+            --secondary-glow: rgba(217, 70, 239, 0.4);
+            --accent: #06b6d4;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.07);
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .blur-sphere {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: 0;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .sphere-1 { width: 300px; height: 300px; background: var(--primary); top: 15%; left: 10%; }
+        .sphere-2 { width: 400px; height: 400px; background: var(--secondary); bottom: 10%; right: 5%; }
+
+        .container { width: 100%; max-width: 700px; z-index: 10; position: relative; }
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(25px);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 3rem 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .header { text-align: center; margin-bottom: 2rem; }
+        .logo-area {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 20px;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 25px var(--primary-glow);
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 30%, #e2e8f0 70%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle { color: var(--text-muted); font-size: 1rem; }
+
+        .input-wrapper { position: relative; margin-bottom: 1.5rem; }
+        .url-input {
+            width: 100%;
+            padding: 1.15rem 7.5rem 1.15rem 1.25rem;
+            background: rgba(0, 0, 0, 0.25);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+        .url-input:focus { border-color: var(--primary); box-shadow: 0 0 20px var(--primary-glow); }
+
+        .paste-btn {
+            position: absolute;
+            right: 0.6rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(217, 70, 239, 0.3));
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            padding: 0.5rem 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .hunt-type-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .hunt-type-btn {
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+        }
+        .hunt-type-btn.active {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(217, 70, 239, 0.2));
+            border-color: var(--primary);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .select-wrapper select {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: white;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 1.15rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(217, 70, 239, 0.4); }
+
+        .progress-container { margin-top: 2rem; display: none; }
+        .progress-bar-outer {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 30px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .progress-bar-inner {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.4s ease;
+        }
+
+        .console-log {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            padding: 1rem;
+            height: 140px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #d1d5db;
+        }
+
+        .btn-download-direct {
+            background: linear-gradient(135deg, #10b981, #059669);
+            text-decoration: none;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="blur-sphere sphere-1"></div>
+    <div class="blur-sphere sphere-2"></div>
+
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="logo-area">🦖</div>
+                <h1>Universal Media Hunter</h1>
+                <p class="subtitle">Unduh video & lagu dari YouTube, TikTok, IG, FB & 1000+ situs (Vercel & Supabase)</p>
+            </div>
+
+            <div class="input-wrapper">
+                <input type="text" id="urlInput" class="url-input" placeholder="Paste URL media di sini...">
+                <button id="pasteBtn" class="paste-btn">TEMPEL</button>
+            </div>
+
+            <div class="hunt-type-container">
+                <div class="hunt-type-btn active" data-type="video">📹 Download Video (MP4)</div>
+                <div class="hunt-type-btn" data-type="audio">🎵 Download Lagu (MP3)</div>
+            </div>
+
+            <div class="select-wrapper">
+                <select id="qualitySelect">
+                    <option value="best" selected>Kualitas Terbaik (Maksimal)</option>
+                    <option value="1080">Full HD (1080p)</option>
+                    <option value="720">HD (720p)</option>
+                    <option value="480">Standar (480p)</option>
+                </select>
+            </div>
+
+            <button id="downloadBtn" class="btn">
+                <span>🚀 Download Sekarang</span>
+            </button>
+
+            <div id="progressContainer" class="progress-container">
+                <div class="progress-bar-outer">
+                    <div id="progressBar" class="progress-bar-inner"></div>
+                </div>
+                <div id="statusText" style="text-align:center; font-weight:600; margin-bottom:1rem;">Menghubungkan...</div>
+                <div class="console-log" id="consoleLog"></div>
+                <a id="directDownloadBtn" href="#" class="btn btn-download-direct" style="display:none;" target="_blank">
+                    💾 Simpan File dari Supabase CDN
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const pasteBtn = document.getElementById('pasteBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statusText = document.getElementById('statusText');
+        const consoleLog = document.getElementById('consoleLog');
+        const directDownloadBtn = document.getElementById('directDownloadBtn');
+        const huntTypeBtns = document.querySelectorAll('.hunt-type-btn');
+        const qualitySelect = document.getElementById('qualitySelect');
+
+        let selectedType = 'video';
+
+        huntTypeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                huntTypeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedType = btn.dataset.type;
+                if (selectedType === 'audio') {
+                    qualitySelect.innerHTML = `
+                        <option value="320">Ultra High (320 kbps)</option>
+                        <option value="192" selected>High Quality (192 kbps)</option>
+                        <option value="128">Standard (128 kbps)</option>
+                    `;
+                } else {
+                    qualitySelect.innerHTML = `
+                        <option value="best" selected>Kualitas Terbaik (Maksimal)</option>
+                        <option value="1080">Full HD (1080p)</option>
+                        <option value="720">HD (720p)</option>
+                        <option value="480">Standar (480p)</option>
+                    `;
+                }
+            });
+        });
+
+        pasteBtn.addEventListener('click', async () => {
+            if (urlInput.value.trim()) {
+                urlInput.value = '';
+                pasteBtn.innerText = 'TEMPEL';
+            } else {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    urlInput.value = text.trim();
+                    pasteBtn.innerText = 'HAPUS';
+                } catch (e) {}
+            }
+        });
+
+        function log(msg) {
+            const div = document.createElement('div');
+            div.innerText = msg;
+            consoleLog.appendChild(div);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        downloadBtn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            if (!url) return alert('URL tidak boleh kosong!');
+
+            downloadBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '30%';
+            statusText.innerText = 'Memproses di Vercel Serverless...';
+            consoleLog.innerHTML = '';
+            log('[System] Mengirim request ke Vercel API...');
+            directDownloadBtn.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url, format: selectedType, quality: qualitySelect.value })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    progressBar.style.width = '100%';
+                    statusText.innerText = '✅ Sukses! Media Siap Didownload.';
+                    log('[Sukses] ' + data.message);
+                    if (data.download_url) {
+                        directDownloadBtn.href = data.download_url;
+                        directDownloadBtn.style.display = 'flex';
+                        log('[Supabase CDN] File siap di: ' + data.download_url);
+                    }
+                } else {
+                    progressBar.style.width = '0%';
+                    statusText.innerText = '❌ Gagal Memproses';
+                    log('[Error] ' + (data.message || 'Terjadi kesalahan server'));
+                }
+            } catch (err) {
+                statusText.innerText = '❌ Error Koneksi';
+                log('[Error] Gagal menghubungi API Vercel: ' + err);
+            } finally {
+                downloadBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

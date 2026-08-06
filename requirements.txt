@@ -1,2 +1,4 @@
 yt-dlp>=2023.0.0
-streamlit>=1.30.0
+flask>=2.0.0
+supabase>=2.0.0
+urllib3==1.26.18
